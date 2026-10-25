@@ -1,50 +1,48 @@
-import csv
+import sqlite3
 
-students_list = "./Students_List.csv"
-attendance_list = "./Attendance_List.csv"
-
+def initialize_db():
+    with sqlite3.connect("attendance.db") as connection:
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS students_list (
+                roll_no INTEGER PRIMARY KEY,
+                name TEXT NOT NULL
+            )
+        """)
+    
 def load_students():
-    with open(students_list, 'r') as f:
-        reader = csv.reader(f)
-        fields = next(reader)
-        rows = list(reader)
+    with sqlite3.connect("attendance.db") as connection:
+        cursor = connection.execute(
+            """SELECT roll_no, name FROM students_list"""
+        )
+        return cursor.fetchall()
 
-        return fields, rows
+def add_student(roll_no, name):
+    try:
+        with sqlite3.connect("attendance.db") as connection:
+            cursor = connection.execute(
+                """INSERT INTO students_list (roll_no, name) VALUES (?, ?)""",(roll_no,name)
+            )
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-def add_student(student):
-    roll_number = student[0]
-    if search_student(roll_number) is not None:
-        print("Student Added")
-    with open(students_list, 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow(student)
-    print("Roll number exists")
+def search_student(roll_no):
+    with sqlite3.connect("attendance.db") as connection:
+        cursor = connection.execute(
+            """SELECT roll_no, name FROM students_list WHERE roll_no = ?""", (roll_no,)
+        )
+        return cursor.fetchone()
 
-def search_student(roll_number):
-    fields, students = load_students()
-    for student in students:
-        if student[0] == str(roll_number):
-            return student
-    return None
+def update_student(roll_no, new_name):
+    with sqlite3.connect("attendance.db") as connection:
+        cursor = connection.execute(
+            "UPDATE students_list SET name = ? WHERE roll_no = ?", (new_name, roll_no)
+        )
+        return cursor.rowcount > 0
 
-def update_student(roll_number, new_name):
-    fields, students = load_students()
-    for student in students:
-        if student[0] == str(roll_number):
-            student[1] = new_name
-            break
-    with open(students_list, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(fields)
-        writer.writerows(students)
-
-def remove_student(roll_number):
-    fields, students = load_students()
-    for student in students:
-        if student[0] == str(roll_number):
-            students.remove(student)
-            break
-    with open(students_list, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(fields)
-        writer.writerows(students)
+def remove_student(roll_no):
+    with sqlite3.connect("attendance.db") as connection:
+        cursor = connection.execute(
+            "DELETE FROM students_list WHERE roll_no = ?", (roll_no,)
+        )
+        return cursor.rowcount > 0
