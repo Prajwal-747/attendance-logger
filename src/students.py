@@ -113,7 +113,6 @@ def update_student():
     else:
         print(f"Could not update student")
 
-
 def remove_student():
     student = select_student()
     
