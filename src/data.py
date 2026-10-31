@@ -98,6 +98,24 @@ def mark_attendance(roll_no: int, class_date: str, hour_no: int, status:str)-> b
         return True
     except sqlite3.IntegrityError:
         return False
+
+def mark_attendance_batch(attendance_list: list, class_date: str, hour_no: int)-> bool:
+    try:
+        with closing(get_connection()) as connection:
+            with connection:
+                connection.executemany(
+                    """
+                        INSERT INTO attendance
+                        (roll_no, class_date, hour_no, status)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(roll_no, class_date, hour_no)
+                        DO UPDATE SET status = excluded.status
+                    """,
+                    [(roll_no, class_date, hour_no, status) for roll_no, _, status in attendance_list]
+                )
+        return True
+    except sqlite3.IntegrityError:
+        return False
     
 def get_absentees(class_date:str, hour_no: int)-> list:
     with closing(get_connection()) as connection:
@@ -136,3 +154,28 @@ def update_attendance(roll_no: int, class_date: str, hour_no: int, new_status: s
                 """, (new_status, roll_no, class_date, hour_no)
             )
             return cursor.rowcount > 0
+
+def get_attendance_by_session(class_date: str, hour_no: int)-> list:
+    with closing(get_connection()) as connection:
+        cursor = connection.execute(
+            """
+            SELECT s.roll_no, s.name, a.status
+            FROM attendance a
+            JOIN students_list s ON a.roll_no = s.roll_no
+            WHERE a.class_date = ? AND a.hour_no = ?
+            ORDER BY s.roll_no
+            """, (class_date, hour_no)
+        )
+        return cursor.fetchall()
+    
+def get_attendance_by_student(roll_no: int)-> list:
+    with closing(get_connection()) as connection:
+        cursor = connection.execute(
+            """
+            SELECT class_date, hour_no, status
+            FROM attendance
+            WHERE roll_no = ?
+            ORDER BY class_date, hour_no
+            """, (roll_no,)
+        )
+        return cursor.fetchall()
