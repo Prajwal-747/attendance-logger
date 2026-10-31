@@ -5,13 +5,14 @@ def list_students()-> None:
     if not students:
         print("No students found.")
         return
-    print("List of Students:")
+    print("\nList of Students:")
     print("-----------------")
     print("Roll No\tName")
     for roll_no, name in students:
         print(f"{roll_no}\t{name}")
         
 def add_student():
+    print("\nAdding Student")
     try:
         roll_no = int(input("Enter Roll Number: "))
     except ValueError:
@@ -29,7 +30,7 @@ def add_student():
         print(f"Could not add student. Roll Number {roll_no} may already exist.")
         
 def select_student():
-    print("Find Student")
+    print("\nFind Student")
     print("1. Search by Roll Number")
     print("2. Search by Name")
     choice = input("Enter your choice: ").strip()
@@ -63,14 +64,14 @@ def select_student():
             print("No matching students found.")
             return None
         
-        print("Matching Students:")
+        print("\nMatching Students:")
         print("------------------")
         print("Roll No\tName")
         for roll_no, name in students:
             print(f"{roll_no}\t{name}")
             
         try:
-            selected_roll_no = int(input("Enter the Roll Number of the student to select: "))
+            selected_roll_no = int(input("\nEnter the Roll Number of the student to select: "))
         except ValueError:
             print("Roll number must be an integer.")
             return None
@@ -84,13 +85,14 @@ def select_student():
         return None
 
 def search_student():
+    print("\nSearching Student")
     student = select_student()
     
     if student is None:
         return
     
     roll_no, name = student  
-    print("Student Found:")
+    print("\nStudent Found:")
     print("------------------")
     print(f"Roll No: {roll_no}")
     print(f"Name: {name }")
@@ -102,7 +104,7 @@ def update_student():
         return
     
     roll_no, name = student
-    print(f"Current Name: {name}")
+    print(f"\nCurrent Name: {name}")
     new_name = input("Enter new name: ").strip()
     
     if not new_name:
@@ -120,7 +122,7 @@ def remove_student():
         return
     
     roll_no, name = student
-    print("Student selected for deletion:")
+    print("\nStudent selected for deletion:")
     print("------------------------------")
     print(f"Roll No: {roll_no}")
     print(f"Name: {name }")

@@ -30,7 +30,7 @@ def student_menu():
 
 def attendance_menu():
     while True:
-           print("ATTENDANCE MANAGEMENT")
+           print("\nATTENDANCE MANAGEMENT")
            print("1. Take Attendance")
            print("2. View Student Attendance")
            print("3. View Session Attendance")
@@ -62,7 +62,7 @@ def main():
     data.initialize_db()
     
     while True:
-        print("Attendance Logger")
+        print("\nAttendance Logger")
         print("1. Student Management")
         print("2. Attendance Management")
         print("0. Exit")

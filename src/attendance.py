@@ -8,7 +8,7 @@ def take_attendance():
         print("No students found. Add students first.")
         return
     
-    print("Taking attendance")
+    print("\nTaking attendance")
     class_date = input("Enter the date (DD/MM/YY): ")
     
     try:
@@ -44,7 +44,7 @@ def take_attendance():
     ]    
     
     while True:
-        print("Attendance List:")
+        print("\nAttendance List:")
         print("Roll No\tName\tStatus")
         for roll_no, name, status in attendance_list:
             print(f"{roll_no}\t{name}\t{status}")
@@ -74,7 +74,7 @@ def take_attendance():
             
     absent_count = len(attendance_list) - present_count
     
-    print("ATTENDANCE SUMMARY")
+    print("\nATTENDANCE SUMMARY")
     print(f"Date: {class_date}, Hour: {hour_no}")
     print(f"Total Students: {len(attendance_list)}")
     print(f"Present: {present_count}")
@@ -106,7 +106,7 @@ def view_student_attendance():
         print(f"No attendance records found for {name}.")
         return
     
-    print("Attendance History:")
+    print("\nStudent Attendance History:")
     print(f"Name: {name}")
     print(f"Roll Number: {roll_no}")
     print("Date\tHour\tStatus")
@@ -123,13 +123,13 @@ def view_student_attendance():
     total = len(records)
     percentage = (present_count/total)*100
     
-    print(f"Total recorded classes: {total}")
+    print(f"\nTotal recorded classes: {total}")
     print(f"Present: {present_count}")
     print(f"Absent: {absent_count}")
     print(f"Attendance percentage: {percentage:.2f}%")
     
 def view_session_attendance():
-    print("View Session Attendance")
+    print("\nView Session Attendance")
     class_date = input("Enter Date (DD/MM/YY): ").strip()
     try:
         class_date = datetime.strptime(class_date, "%d/%m/%y").strftime("%Y-%m-%d")
@@ -151,7 +151,7 @@ def view_session_attendance():
         print("No attendance record found for this session")
         return
     
-    print("Session Attendance")
+    print("\nSession Attendance")
     print(f"Date: {class_date}")
     print(f"Hour: {hour_no}")
     print("Roll Number\tName\tStatus")
@@ -166,12 +166,12 @@ def view_session_attendance():
         else:
             absent_count += 1
             
-    print(f"Total Recorded: {len(records)}")
+    print(f"\nTotal Recorded: {len(records)}")
     print(f"Present: {present_count}")
     print(f"Absent: {absent_count}")
     
 def view_absentees():
-    print("View Absentees")
+    print("\nView Absentees")
     class_date = input("Enter Date (DD/MM/YY): ").strip()
     try:
         class_date = datetime.strptime(class_date, "%d/%m/%y").strftime("%Y-%m-%d")
@@ -194,17 +194,17 @@ def view_absentees():
         print("No absentees found")
         return
     
-    print("Absentee List:")
+    print("\nAbsentee List:")
     print(f"Date: {class_date}")
     print(f"Hour: {hour_no}")
     print("Roll Number\tName")
     for roll_no, name in absentees:
         print(f"{roll_no}\t{name}")
         
-    print(f"Total absentees: {len(absentees)}")
+    print(f"\nTotal absentees: {len(absentees)}")
         
 def view_unmarked():
-    print("View Unmarked Students")
+    print("\nView Unmarked Students")
     class_date = input("Enter Date (DD/MM/YY): ").strip()
     try:
         class_date = datetime.strptime(class_date, "%d/%m/%y").strftime("%Y-%m-%d")
@@ -227,17 +227,17 @@ def view_unmarked():
         print("All students have been marked")
         return
     
-    print("Unmarked Students List:")
+    print("\nUnmarked Students List:")
     print(f"Date: {class_date}")
     print(f"Hour: {hour_no}")
     print("Roll Number\tName")
     for roll_no, name in unmarked:
         print(f"{roll_no}\t{name}")
         
-    print(f"Total Unmarked Students: {len(unmarked)}")
+    print(f"\nTotal Unmarked Students: {len(unmarked)}")
 
 def edit_attendance():
-    print("Edit Attendance")
+    print("\nEdit Attendance")
     
     class_date = input("Enter Date (DD/MM/YY): ").strip()
     try:
@@ -263,7 +263,7 @@ def edit_attendance():
             print("No students found")
             return
         
-        print("Attendance Session")
+        print("\nAttendance Session")
         print("Roll No.\tName\tStatus")
         for roll_no, name, status in records:
             print(f"{roll_no}\t{name}\t{status}")
