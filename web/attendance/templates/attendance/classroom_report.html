@@ -1,0 +1,137 @@
+
+{% extends "attendance/base.html" %}
+
+{% block title %}Classroom Report | AttendanceLogger{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <a href="{% url 'classroom_detail' classroom.id %}" class="back-link">
+        ← Back to Classroom
+    </a>
+    <h2>Classroom Attendance Report</h2>
+    <p class="text-muted">{{ classroom.name }}</p>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Filter Report</h3>
+            <p class="text-muted">Choose a date range for attendance statistics.</p>
+        </div>
+    </div>
+
+    <form method="get" class="form-inline">
+        <div class="form-field">
+            <label for="start_date">From</label>
+            <input
+                type="date"
+                name="start_date"
+                id="start_date"
+                value="{{ start_date|date:'Y-m-d' }}"
+            >
+        </div>
+
+        <div class="form-field">
+            <label for="end_date">To</label>
+            <input
+                type="date"
+                name="end_date"
+                id="end_date"
+                value="{{ end_date|date:'Y-m-d' }}"
+            >
+        </div>
+
+        <button type="submit" class="button button-primary">
+            Generate Report
+        </button>
+    </form>
+</section>
+
+<section class="content-section">
+    <div class="section-heading">
+        <div>
+            <h3>Attendance Overview</h3>
+            <p class="text-muted">Overall classroom performance.</p>
+        </div>
+    </div>
+
+    <div class="report-summary-grid">
+        <div class="report-stat">
+            <span>Completed Sessions</span>
+            <strong>{{ total_sessions }}</strong>
+        </div>
+
+        <div class="report-stat">
+            <span>Total Records</span>
+            <strong>{{ total_records }}</strong>
+        </div>
+
+        <div class="report-stat stat-present">
+            <span>Present</span>
+            <strong>{{ present }}</strong>
+        </div>
+
+        <div class="report-stat stat-absent">
+            <span>Absent</span>
+            <strong>{{ absent }}</strong>
+        </div>
+
+        <div class="report-stat stat-percentage">
+            <span>Overall Attendance</span>
+            <strong>{{ attendance_percentage }}%</strong>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Subject-wise Attendance</h3>
+            <p class="text-muted">
+                Compare attendance across subjects in this classroom.
+            </p>
+        </div>
+
+        <span class="count-badge">{{ subject_reports|length }} subjects</span>
+    </div>
+
+    {% if subject_reports %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Total Records</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Attendance</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for report in subject_reports %}
+                        <tr>
+                            <td><strong>{{ report.name }}</strong></td>
+                            <td>{{ report.total }}</td>
+                            <td>{{ report.present }}</td>
+                            <td>{{ report.absent }}</td>
+                            <td>
+                                <strong>{{ report.percentage }}%</strong>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No subject records found</h3>
+            <p class="text-muted">
+                Attendance statistics will appear after attendance is recorded.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

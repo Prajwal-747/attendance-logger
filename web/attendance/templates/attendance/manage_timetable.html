@@ -1,0 +1,122 @@
+{% extends "attendance/base.html" %}
+
+{% block title %}Manage Timetable | AttendanceLogger{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <a href="{% url 'classroom_detail' classroom.id %}" class="back-link">
+        ← Back to Classroom
+    </a>
+    <h2>Manage Timetable</h2>
+    <p class="text-muted">{{ classroom.name }}</p>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Add Timetable Period</h3>
+            <p class="text-muted">Schedule a subject for a classroom.</p>
+        </div>
+    </div>
+
+    {% if assignments %}
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label for="assignment">Subject and Teacher</label>
+                <select name="assignment" id="assignment" required>
+                    <option value="">Choose subject</option>
+                    {% for assignment in assignments %}
+                        <option value="{{ assignment.id }}">
+                            {{ assignment.subject.name }} —
+                            {{ assignment.teacher.get_full_name|default:assignment.teacher.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="weekday">Day</label>
+                <select name="weekday" id="weekday" required>
+                    <option value="">Choose day</option>
+                    {% for code, name in weekdays %}
+                        <option value="{{ code }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-field">
+                <label for="period">Period</label>
+                <select name="period" id="period" required>
+                    <option value="">Choose period</option>
+                    {% for period in periods %}
+                        <option value="{{ period }}">Period {{ period }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="button button-primary">
+                Add Period
+            </button>
+        </form>
+    {% else %}
+        <div class="empty-state">
+            <h3>No subjects available</h3>
+            <p class="text-muted">
+                Assign subjects and teachers before creating a timetable.
+            </p>
+            <a href="{% url 'assign_subject' classroom.id %}"
+               class="button button-primary">
+                Assign Subject
+            </a>
+        </div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Current Timetable</h3>
+            <p class="text-muted">All scheduled classroom periods.</p>
+        </div>
+        <span class="count-badge">
+            {{ timetable_entries|length }} periods
+        </span>
+    </div>
+
+    {% if timetable_entries %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Period</th>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in timetable_entries %}
+                        <tr>
+                            <td>{{ entry.get_weekday_display }}</td>
+                            <td>Period {{ entry.period }}</td>
+                            <td>{{ entry.assignment.subject.name }}</td>
+                            <td>
+                                {{ entry.assignment.teacher.get_full_name|default:entry.assignment.teacher.username }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No timetable yet</h3>
+            <p class="text-muted">Add the first scheduled period above.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

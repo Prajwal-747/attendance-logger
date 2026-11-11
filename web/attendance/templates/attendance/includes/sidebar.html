@@ -1,0 +1,45 @@
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <h2>AttendanceLogger</h2>
+    </div>
+
+    <nav class="sidebar-nav">
+
+        <a href="{% url 'dashboard' %}" class="nav-link">
+            Dashboard
+        </a>
+
+        {% if request.user.role == "ADMIN" %}
+            <span class="nav-section">Administration</span>
+
+            <a href="{% url 'create_classroom' %}" class="nav-link">
+                Create Classroom
+            </a>
+        {% endif %}
+
+        {% if request.user.role == "TEACHER" %}
+            <span class="nav-section">Teaching</span>
+
+            <a href="{% url 'teacher_timetable' %}" class="nav-link">
+                My Timetable
+            </a>
+
+            <a href="{% url 'teacher_report' request.user.id %}" class="nav-link">
+                My Attendance Report
+            </a>
+        {% endif %}
+
+        {% if request.user.role == "STUDENT" %}
+            <span class="nav-section">Student</span>
+
+            <a href="#" class="nav-link">
+                My Attendance
+            </a>
+        {% endif %}
+
+    </nav>
+
+    <div class="sidebar-footer">
+        <span>{{ request.user.get_role_display }}</span>
+    </div>
+</aside>

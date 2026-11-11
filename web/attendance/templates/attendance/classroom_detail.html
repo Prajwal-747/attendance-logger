@@ -1,109 +1,275 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ classroom.name }} | AttendanceLogger</title>
-</head>
+{% extends "attendance/base.html" %}
 
-<body>
-    <header>
-        <h1>AttendanceLogger</h1>
-        <a href="{% url 'dashboard' %}">Back to Dashboard</a>
-    </header>
+{% block title %}{{ classroom.name }} | AttendanceLogger{% endblock %}
 
-    <main>
-        {% if messages %}
-            {% for message in messages %}
-                <p>{{ message }}</p>
-            {% endfor %}
-        {% endif %}
+{% block content %}
 
+<section class="page-heading">
+    <div>
+        <a href="{% url 'dashboard' %}" class="back-link">← Back to Dashboard</a>
         <h2>{{ classroom.name }}</h2>
-        <p>Class code: {{ classroom.code }}</p>
-        <p>
-    <a href="{% url 'mark_attendance' classroom.id %}">
-        Take Attendance
-    </a>
-</p>
-<p>
-    <a href="{% url 'daily_report' classroom.id %}">
-        Daily Attendance Report
-    </a>
-</p>
+        <p class="text-muted">
+            Classroom code: <strong>{{ classroom.code }}</strong>
+        </p>
+    </div>
+</section>
 
-        <section>
-            <h3>Add Student</h3>
+<!-- Class Information -->
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Class Information</h3>
+            <p class="text-muted">Basic classroom details and assignments.</p>
+        </div>
+    </div>
 
-            <form method="post" action="{% url 'add_student' classroom.id %}">
-                {% csrf_token %}
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="info-label">Class Teacher</span>
+            <strong>
+                {% if classroom.class_teacher %}
+                    {{ classroom.class_teacher.get_full_name|default:classroom.class_teacher.username }}
+                {% else %}
+                    Not assigned
+                {% endif %}
+            </strong>
+        </div>
 
-                <label for="name">Student Name</label>
-                <input type="text" name="name" id="name" required>
+        <div class="info-item">
+            <span class="info-label">Total Students</span>
+            <strong>{{ students|length }}</strong>
+        </div>
 
-                <br><br>
+        <div class="info-item">
+            <span class="info-label">Classroom Code</span>
+            <strong>{{ classroom.code }}</strong>
+        </div>
+    </div>
 
-                <label for="roll_no">Roll Number</label>
-                <input type="number" name="roll_no" id="roll_no" min="1" required>
+    {% if user.role == "ADMIN" %}
+        <a href="{% url 'assign_class_teacher' classroom.id %}"
+           class="button button-secondary">
+            Assign Class Teacher
+        </a>
+    {% endif %}
+</section>
 
-                <br><br>
+<!-- Subjects -->
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Subjects and Teachers</h3>
+            <p class="text-muted">Teachers assigned to this classroom.</p>
+        </div>
+    </div>
 
-                <button type="submit">Add Student</button>
-            </form>
-        </section>
+    {% for assignment in classroom.subject_assignments.all %}
+        <div class="assignment-row">
+            <div>
+                <strong>{{ assignment.subject.name }}</strong>
+                <p class="text-muted">
+                    {{ assignment.teacher.get_full_name|default:assignment.teacher.username }}
+                </p>
+            </div>
 
-        <section>
-            <h3>Students</h3>
-
-            {% if students %}
-                {% for student in students %}
-                    <div>
-                        <p>{{ student.roll_no }} - {{ student.name }}</p>
-
-                        <form method="post" action="{% url 'edit_student' classroom.id student.id %}">
-                            {% csrf_token %}
-
-                            <label for="name_{{ student.id }}">Student Name</label>
-                            <input
-                                type="text"
-                                name="name"
-                                id="name_{{ student.id }}"
-                                value="{{ student.name }}"
-                                required
-                            >
-
-                            <br><br>
-
-                            <label for="roll_{{ student.id }}">Roll Number</label>
-                            <input
-                                type="number"
-                                name="roll_no"
-                                id="roll_{{ student.id }}"
-                                value="{{ student.roll_no }}"
-                                min="1"
-                                required
-                            >
-
-                            <br><br>
-
-                            <button type="submit">Save Changes</button>
-                        </form>
-                        <form
-    method="post"
-    action="{% url 'delete_student' classroom.id student.id %}"
-    onsubmit="return confirm('Are you sure you want to delete this student? This will also delete their attendance records.');"
->
-    {% csrf_token %}
-    <button type="submit">Delete Student</button>
-</form>
-                    </div>
-
-                    <hr>
-                {% endfor %}
-            {% else %}
-                <p>No students have been added yet.</p>
+            {% if user.role == "ADMIN" or user.id == classroom.class_teacher_id or user.id == assignment.teacher_id %}
+                <a href="{% url 'teacher_report' assignment.teacher.id %}">
+                    View Report
+                </a>
             {% endif %}
-        </section>
-    </main>
-</body>
-</html>
+        </div>
+    {% empty %}
+        <p class="text-muted">No subjects assigned yet.</p>
+    {% endfor %}
+
+    {% if can_manage %}
+        <a href="{% url 'assign_subject' classroom.id %}"
+           class="button button-primary section-action">
+            Assign Subject
+        </a>
+    {% endif %}
+</section>
+
+<!-- Timetable -->
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Timetable</h3>
+            <p class="text-muted">View and manage scheduled periods.</p>
+        </div>
+    </div>
+
+    {% if can_manage %}
+        <a href="{% url 'manage_timetable' classroom.id %}"
+           class="button button-primary">
+            Manage Timetable
+        </a>
+    {% else %}
+        <p class="text-muted">
+            Contact your class teacher to manage the timetable.
+        </p>
+    {% endif %}
+</section>
+
+<!-- Reports -->
+{% if can_manage %}
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h3>Classroom Reports</h3>
+                <p class="text-muted">
+                    View overall and subject-wise attendance statistics.
+                </p>
+            </div>
+        </div>
+
+        <a href="{% url 'classroom_report' classroom.id %}"
+           class="button button-primary">
+            View Classroom Report
+        </a>
+    </section>
+{% endif %}
+
+<!-- Add Student -->
+{% if can_manage %}
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h3>Add Student</h3>
+                <p class="text-muted">Add a student to the classroom roster.</p>
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'add_student' classroom.id %}">
+            {% csrf_token %}
+
+            <div class="form-field">
+                <label for="name">Student Name</label>
+                <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    placeholder="Enter student's full name"
+                    required
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="roll_no">Roll Number</label>
+                <input
+                    type="number"
+                    name="roll_no"
+                    id="roll_no"
+                    min="1"
+                    placeholder="Enter roll number"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="button button-primary">
+                Add Student
+            </button>
+        </form>
+    </section>
+{% endif %}
+
+<!-- Students -->
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Students</h3>
+            <p class="text-muted">Students enrolled in this classroom.</p>
+        </div>
+
+        <span class="count-badge">{{ students|length }} students</span>
+    </div>
+
+    {% if students %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Roll Number</th>
+                        <th>Student Name</th>
+                        <th>Attendance</th>
+                        {% if can_manage %}
+                            <th>Management</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td>{{ student.roll_no }}</td>
+                            <td>{{ student.name }}</td>
+
+                            <td>
+                                <a href="{% url 'student_report' student.id %}">
+                                    View Report
+                                </a>
+                            </td>
+
+                            {% if can_manage %}
+                                <td>
+                                    <details class="student-actions">
+                                        <summary>Manage</summary>
+
+                                        <form method="post"
+                                              action="{% url 'edit_student' classroom.id student.id %}">
+                                            {% csrf_token %}
+
+                                            <label for="name_{{ student.id }}">Name</label>
+                                            <input
+                                                type="text"
+                                                name="name"
+                                                id="name_{{ student.id }}"
+                                                value="{{ student.name }}"
+                                                required
+                                            >
+
+                                            <label for="roll_{{ student.id }}">Roll Number</label>
+                                            <input
+                                                type="number"
+                                                name="roll_no"
+                                                id="roll_{{ student.id }}"
+                                                value="{{ student.roll_no }}"
+                                                min="1"
+                                                required
+                                            >
+
+                                            <button type="submit"
+                                                    class="button button-primary">
+                                                Save Changes
+                                            </button>
+                                        </form>
+
+                                        <form method="post"
+                                              action="{% url 'delete_student' classroom.id student.id %}"
+                                              onsubmit="return confirm('Are you sure you want to delete this student? Their attendance records will also be deleted.');">
+                                            {% csrf_token %}
+
+                                            <button type="submit"
+                                                    class="button button-danger">
+                                                Delete Student
+                                            </button>
+                                        </form>
+                                    </details>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No students yet</h3>
+            <p class="text-muted">
+                Add students to this classroom to get started.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

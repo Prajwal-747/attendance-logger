@@ -1,48 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | AttendanceLogger</title>
-</head>
-<body>
-    <header>
-        <h1>AttendanceLogger</h1>
-        <p>Welcome, {{ request.user.first_name|default:request.user.email }}</p>
+{% extends "attendance/base.html" %}
 
-        <form method="post" action="{% url 'logout' %}">
+{% block title %}Dashboard | AttendanceLogger{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <div>
+        <h2>Welcome, {{ request.user.first_name|default:request.user.email }}</h2>
+        <p class="text-muted">
+            Here's an overview of your AttendanceLogger workspace.
+        </p>
+    </div>
+</section>
+
+{% if user_role == "ADMIN" %}
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h3>College Administration</h3>
+                <p class="text-muted">Create and manage classrooms.</p>
+            </div>
+        </div>
+
+        <form method="post" action="{% url 'create_classroom' %}" class="form-inline">
             {% csrf_token %}
-            <button type="submit">Logout</button>
+
+            <div class="form-field">
+                <label for="name">Classroom Name</label>
+                <input
+                    type="text"
+                    name="name"
+                    id="name"
+                    placeholder="e.g. CSE - Semester 1"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="button button-primary">
+                Create Classroom
+            </button>
         </form>
-    </header>
+    </section>
+{% endif %}
 
-    <main>
-        <h2>Your Classrooms</h2>
-        <h3>Create a Classroom</h3>
+{% if user_role == "TEACHER" %}
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h3>Teaching</h3>
+                <p class="text-muted">Access your teaching schedule and reports.</p>
+            </div>
+        </div>
 
-<form method="post" action="{% url 'create_classroom' %}">
-    {% csrf_token %}
+        <div class="action-group">
+            <a href="{% url 'teacher_timetable' %}" class="button button-primary">
+                View My Timetable
+            </a>
 
-    <label for="name">Classroom Name</label>
-    <input type="text" name="name" id="name" required>
+            <a href="{% url 'teacher_report' request.user.id %}" class="button button-secondary">
+                My Attendance Report
+            </a>
+        </div>
+    </section>
+{% endif %}
 
-    <button type="submit">Create Classroom</button>
-</form>
+<section class="content-section">
+    <div class="section-heading">
+        <div>
+            <h3>Your Classrooms</h3>
+            <p class="text-muted">
+                Classrooms available to your account.
+            </p>
+        </div>
 
-        {% if classrooms %}
+        <span class="count-badge">{{ classrooms|length }} classrooms</span>
+    </div>
+
+    {% if classrooms %}
+        <div class="card-grid">
             {% for classroom in classrooms %}
-                <div>
-                    <h3>
-    <a href="{% url 'classroom_detail' classroom.id %}">
-        {{ classroom.name }}
-    </a>
-</h3>
-                    <p>Class code: {{ classroom.code }}</p>
-                </div>
+                <article class="classroom-card">
+                    <div class="card-top">
+                        <span class="card-label">CLASSROOM</span>
+
+                        {% if user_role == "ADMIN" %}
+                            <span class="status-badge">
+                                {{ classroom.code }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <h3>{{ classroom.name }}</h3>
+
+                    {% if classroom.class_teacher %}
+                        <p class="text-muted">
+                            Class Teacher:
+                            {{ classroom.class_teacher.get_full_name|default:classroom.class_teacher.username }}
+                        </p>
+                    {% else %}
+                        <p class="text-muted">Class teacher not assigned</p>
+                    {% endif %}
+
+                    <a
+                        href="{% url 'classroom_detail' classroom.id %}"
+                        class="button button-primary card-action"
+                    >
+                        Open Classroom
+                    </a>
+                </article>
             {% endfor %}
-        {% else %}
-            <p>You haven't created any classrooms yet.</p>
-        {% endif %}
-    </main>
-</body>
-</html>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No classrooms yet</h3>
+            <p class="text-muted">
+                No classrooms are currently assigned to your account.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

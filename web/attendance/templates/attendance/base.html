@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}AttendanceLogger{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'attendance/css/style.css' %}">
+</head>
+
+<body>
+    <div class="app-layout">
+
+        {% include "attendance/includes/sidebar.html" %}
+
+        <div class="main-area">
+
+            <header class="topbar">
+                <div>
+                    <h1>AttendanceLogger</h1>
+                    <p>Attendance management system</p>
+                </div>
+
+                <div class="topbar-user">
+                    <span>
+                        {{ request.user.get_full_name|default:request.user.username }}
+                    </span>
+
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="button button-secondary">
+                            Logout
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <main class="page-content">
+
+                {% include "attendance/includes/messages.html" %}
+
+                {% block content %}
+                {% endblock %}
+
+            </main>
+
+        </div>
+    </div>
+</body>
+</html>

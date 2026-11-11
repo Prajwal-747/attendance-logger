@@ -1,84 +1,119 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Take Attendance | AttendanceLogger</title>
-</head>
+{% extends "attendance/base.html" %}
 
-<body>
-    <header>
-        <h1>AttendanceLogger</h1>
-        <a href="{% url 'classroom_detail' classroom.id %}">Back to Classroom</a>
-    </header>
+{% block title %}Take Attendance | AttendanceLogger{% endblock %}
 
-    <main>
-        {% if messages %}
-            {% for message in messages %}
-                <p>{{ message }}</p>
-            {% endfor %}
+{% block content %}
+
+<section class="page-heading">
+    <a href="{% url 'classroom_detail' classroom.id %}" class="back-link">
+        ← Back to Classroom
+    </a>
+
+    <h2>Mark Attendance</h2>
+    <p class="text-muted">{{ classroom.name }}</p>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>{{ timetable_entry.assignment.subject.name }}</h3>
+            <p class="text-muted">
+                Teacher:
+                {{ timetable_entry.assignment.teacher.get_full_name|default:timetable_entry.assignment.teacher.username }}
+            </p>
+        </div>
+
+        <span class="count-badge">
+            {{ timetable_entry.get_weekday_display }} · Period {{ timetable_entry.period }}
+        </span>
+    </div>
+</section>
+
+<section class="panel">
+    <h3>Select Class Date</h3>
+
+    <form method="get" class="form-inline">
+        <div class="form-field">
+            <label for="date">Class Date</label>
+            <input
+                type="date"
+                name="date"
+                id="date"
+                value="{{ selected_date|date:'Y-m-d' }}"
+                required
+            >
+        </div>
+
+        <button type="submit" class="button button-primary">
+            Load Attendance
+        </button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Student Attendance</h3>
+            <p class="text-muted">
+                Select Present or Absent for every student.
+            </p>
+        </div>
+    </div>
+
+    {% if attendance_list %}
+
+        {% if session %}
+            <div class="message message-info">
+                Attendance has already been submitted for this date.
+                You can update it below.
+            </div>
         {% endif %}
 
-        <h2>{{ classroom.name }} - Attendance</h2>
+        <div class="attendance-summary">
+            <div class="summary-item">
+                <span>Total Students</span>
+                <strong>{{ attendance_list|length }}</strong>
+            </div>
 
-        <!-- Select date and hour -->
-        <section>
-            <form method="get">
-                <label for="date">Date</label>
-                <input
-                    type="date"
-                    name="date"
-                    id="date"
-                    value="{{ selected_date|date:'Y-m-d' }}"
-                    required
-                >
+            <div class="summary-item present-summary">
+                <span>Present</span>
+                <strong id="present-count">0</strong>
+            </div>
 
-                <label for="hour">Hour</label>
-                <select name="hour" id="hour">
-                    {% for hour in "123456" %}
-                        <option
-                            value="{{ hour }}"
-                            {% if selected_hour == hour|add:"0" %}selected{% endif %}
-                        >
-                            Hour {{ hour }}
-                        </option>
-                    {% endfor %}
-                </select>
+            <div class="summary-item absent-summary">
+                <span>Absent</span>
+                <strong id="absent-count">0</strong>
+            </div>
 
-                <button type="submit">Load Attendance</button>
-            </form>
-        </section>
+            <div class="summary-item">
+                <span>Not Marked</span>
+                <strong id="unmarked-count">{{ attendance_list|length }}</strong>
+            </div>
+        </div>
 
-        <hr>
+        <form method="post" id="attendance-form"
+      data-total="{{ attendance_list|length }}">
+            {% csrf_token %}
 
-        <!-- Attendance form -->
-        <section>
-            <h3>Mark Students</h3>
+            <input
+                type="hidden"
+                name="class_date"
+                value="{{ selected_date|date:'Y-m-d' }}"
+            >
 
-            {% if attendance_list %}
-                <div>
-                    <p>Total: {{ attendance_list|length }}</p>
-                    <p>Present: <span id="present-count">0</span></p>
-                    <p>Absent: <span id="absent-count">0</span></p>
-                </div>
+            <div class="attendance-list">
+                {% for item in attendance_list %}
+                    <div class="attendance-card">
+                        <div class="student-identity">
+                            <span class="roll-badge">
+                                {{ item.student.roll_no }}
+                            </span>
 
-                <form method="post" id="attendance-form">
-                    {% csrf_token %}
+                            <strong>{{ item.student.name }}</strong>
+                        </div>
 
-                    <input type="hidden" name="class_date"
-                           value="{{ selected_date|date:'Y-m-d' }}">
-
-                    <input type="hidden" name="hour_no"
-                           value="{{ selected_hour }}">
-
-                    {% for item in attendance_list %}
-                        <div>
-                            <p>
-                                {{ item.student.roll_no }} -
-                                {{ item.student.name }}
-                            </p>
-
-                            <label>
+                        <div class="attendance-options">
+                            <label class="attendance-option present-option">
                                 <input
                                     type="radio"
                                     name="status_{{ item.student.id }}"
@@ -89,7 +124,7 @@
                                 Present
                             </label>
 
-                            <label>
+                            <label class="attendance-option absent-option">
                                 <input
                                     type="radio"
                                     name="status_{{ item.student.id }}"
@@ -99,40 +134,49 @@
                                 Absent
                             </label>
                         </div>
+                    </div>
+                {% endfor %}
+            </div>
 
-                        <hr>
-                    {% endfor %}
+            <div class="attendance-submit">
+                <button type="submit" class="button button-primary">
+                    Submit Attendance
+                </button>
+            </div>
+        </form>
 
-                    <button type="submit">Submit Attendance</button>
-                </form>
+    {% else %}
+        <div class="empty-state">
+            <h3>No students found</h3>
+            <p class="text-muted">
+                Add students to this classroom before marking attendance.
+            </p>
+        </div>
+    {% endif %}
+</section>
+<script>
+    const attendanceForm = document.getElementById("attendance-form");
 
-            {% else %}
-                <p>No students have been added to this classroom yet.</p>
-            {% endif %}
-        </section>
-    </main>
+    if (attendanceForm) {
+        function updateSummary() {
+            const present = attendanceForm.querySelectorAll(
+                'input[value="PRESENT"]:checked'
+            ).length;
 
-    <script>
-        const attendanceForm = document.getElementById("attendance-form");
+            const absent = attendanceForm.querySelectorAll(
+                'input[value="ABSENT"]:checked'
+            ).length;
 
-        if (attendanceForm) {
-            function updateSummary() {
-                const present = attendanceForm.querySelectorAll(
-                    'input[value="PRESENT"]:checked'
-                ).length;
+            const total = Number(attendanceForm.dataset.total);
 
-                const absent = attendanceForm.querySelectorAll(
-                    'input[value="ABSENT"]:checked'
-                ).length;
-
-                document.getElementById("present-count").textContent = present;
-                document.getElementById("absent-count").textContent = absent;
-            }
-
-            attendanceForm.addEventListener("change", updateSummary);
-
-            updateSummary();
+            document.getElementById("present-count").textContent = present;
+            document.getElementById("absent-count").textContent = absent;
+            document.getElementById("unmarked-count").textContent =
+                total - present - absent;
         }
-    </script>
-</body>
-</html>
+
+        attendanceForm.addEventListener("change", updateSummary);
+        updateSummary();
+    }
+</script>
+{% endblock %}

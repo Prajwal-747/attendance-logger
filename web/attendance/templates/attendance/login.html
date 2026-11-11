@@ -1,32 +1,63 @@
+
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | AttendanceLogger</title>
+    <link rel="stylesheet" href="{% static 'attendance/css/style.css' %}">
 </head>
-<body>
-    <h1>AttendanceLogger</h1>
-    <h2>Login</h2>
 
-    {% if form.errors %}
-        <p>Invalid email or password. Please try again.</p>
-    {% endif %}
+<body class="login-page">
 
-    <form method="post">
-        {% csrf_token %}
+    <main class="login-container">
+        <div class="login-brand">
+            <div class="login-logo">AL</div>
+            <h1>AttendanceLogger</h1>
+            <p>Attendance management made simple.</p>
+        </div>
 
-        <label for="id_username">Email</label>
-        {{ form.username }}
+        <section class="login-card">
+            <div class="login-heading">
+                <h2>Welcome back</h2>
+                <p class="text-muted">Sign in to access your account.</p>
+            </div>
 
-        <br><br>
+            {% if form.errors %}
+                <div class="message message-error">
+                    Invalid email or password. Please try again.
+                </div>
+            {% endif %}
 
-        <label for="id_password">Password</label>
-        {{ form.password }}
+            <form method="post">
+                {% csrf_token %}
 
-        <br><br>
+                <div class="form-field">
+                    <label for="id_username">Email Address</label>
+                    {{ form.username }}
+                </div>
 
-        <button type="submit">Login</button>
-    </form>
+                <div class="form-field">
+                    <label for="id_password">Password</label>
+                    {{ form.password }}
+                </div>
+
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <button type="submit" class="button button-primary login-button">
+                    Sign In
+                </button>
+            </form>
+        </section>
+
+        <p class="login-footer">
+            AttendanceLogger · Attendance Management System
+        </p>
+    </main>
+
 </body>
 </html>

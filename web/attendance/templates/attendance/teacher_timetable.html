@@ -1,0 +1,79 @@
+{% extends "attendance/base.html" %}
+
+{% block title %}My Timetable | AttendanceLogger{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <h2>My Teaching Timetable</h2>
+    <p class="text-muted">
+        View your scheduled classes and manage attendance.
+    </p>
+</section>
+
+<div class="action-group page-actions">
+    <a href="{% url 'teacher_report' request.user.id %}"
+       class="button button-primary">
+        My Attendance Report
+    </a>
+</div>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Scheduled Classes</h3>
+            <p class="text-muted">Your assigned teaching periods.</p>
+        </div>
+
+        <span class="count-badge">
+            {{ timetable_entries|length }} periods
+        </span>
+    </div>
+
+    {% if timetable_entries %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Period</th>
+                        <th>Classroom</th>
+                        <th>Subject</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for entry in timetable_entries %}
+                        <tr>
+                            <td>{{ entry.get_weekday_display }}</td>
+                            <td>Period {{ entry.period }}</td>
+                            <td>{{ entry.assignment.classroom.name }}</td>
+                            <td>{{ entry.assignment.subject.name }}</td>
+                            <td>
+                                <div class="table-actions">
+                                    <a href="{% url 'mark_attendance' entry.id %}">
+                                        Mark Attendance
+                                    </a>
+
+                                    <a href="{% url 'daily_report' entry.id %}">
+                                        View Report
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No periods assigned</h3>
+            <p class="text-muted">
+                Your timetable will appear here once a classroom assigns you a subject.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

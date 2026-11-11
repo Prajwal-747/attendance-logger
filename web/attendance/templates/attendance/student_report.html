@@ -1,0 +1,150 @@
+
+{% extends "attendance/base.html" %}
+
+{% block title %}Student Report | AttendanceLogger{% endblock %}
+
+{% block content %}
+
+<section class="page-heading">
+    <a href="{% url 'classroom_detail' student.classroom.id %}" class="back-link">
+        ← Back to Classroom
+    </a>
+    <h2>Student Attendance Report</h2>
+    <p class="text-muted">{{ student.classroom.name }}</p>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>{{ student.name }}</h3>
+            <p class="text-muted">Student attendance history and performance.</p>
+        </div>
+        <span class="count-badge">Roll No. {{ student.roll_no }}</span>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Filter Report</h3>
+            <p class="text-muted">Choose a date range.</p>
+        </div>
+    </div>
+
+    <form method="get" class="form-inline">
+        <div class="form-field">
+            <label for="start_date">From</label>
+            <input
+                type="date"
+                name="start_date"
+                id="start_date"
+                value="{{ start_date|date:'Y-m-d' }}"
+            >
+        </div>
+
+        <div class="form-field">
+            <label for="end_date">To</label>
+            <input
+                type="date"
+                name="end_date"
+                id="end_date"
+                value="{{ end_date|date:'Y-m-d' }}"
+            >
+        </div>
+
+        <button type="submit" class="button button-primary">
+            Generate Report
+        </button>
+    </form>
+</section>
+
+<section class="content-section">
+    <div class="section-heading">
+        <div>
+            <h3>Attendance Summary</h3>
+            <p class="text-muted">Your attendance statistics for the selected period.</p>
+        </div>
+    </div>
+
+    <div class="report-summary-grid">
+        <div class="report-stat">
+            <span>Total Classes</span>
+            <strong>{{ total }}</strong>
+        </div>
+
+        <div class="report-stat stat-present">
+            <span>Present</span>
+            <strong>{{ present }}</strong>
+        </div>
+
+        <div class="report-stat stat-absent">
+            <span>Absent</span>
+            <strong>{{ absent }}</strong>
+        </div>
+
+        <div class="report-stat stat-percentage">
+            <span>Attendance</span>
+            <strong>{{ percentage }}%</strong>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="section-heading">
+        <div>
+            <h3>Attendance History</h3>
+            <p class="text-muted">A record of every marked class.</p>
+        </div>
+
+        <span class="count-badge">{{ total }} records</span>
+    </div>
+
+    {% if records %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for record in records %}
+                        <tr>
+                            <td>{{ record.session.class_date }}</td>
+                            <td>
+                                {{ record.session.timetable_entry.assignment.subject.name }}
+                            </td>
+                            <td>
+                                {{ record.session.timetable_entry.assignment.teacher.get_full_name|default:record.session.timetable_entry.assignment.teacher.username }}
+                            </td>
+                            <td>
+                                {% if record.status == "PRESENT" %}
+                                    <span class="attendance-status status-present">
+                                        Present
+                                    </span>
+                                {% else %}
+                                    <span class="attendance-status status-absent">
+                                        Absent
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h3>No attendance history</h3>
+            <p class="text-muted">
+                No attendance records were found for this student.
+            </p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}
