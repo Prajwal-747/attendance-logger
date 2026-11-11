@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Attendance | AttendanceLogger</title>
+</head>
+
+<body>
+    <header>
+        <h1>AttendanceLogger</h1>
+        <a href="{% url 'classroom_detail' classroom.id %}">Back to Classroom</a>
+    </header>
+
+    <main>
+        {% if messages %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+
+        <h2>{{ classroom.name }} - Attendance</h2>
+
+        <!-- Select date and hour -->
+        <section>
+            <form method="get">
+                <label for="date">Date</label>
+                <input
+                    type="date"
+                    name="date"
+                    id="date"
+                    value="{{ selected_date|date:'Y-m-d' }}"
+                    required
+                >
+
+                <label for="hour">Hour</label>
+                <select name="hour" id="hour">
+                    {% for hour in "123456" %}
+                        <option
+                            value="{{ hour }}"
+                            {% if selected_hour == hour|add:"0" %}selected{% endif %}
+                        >
+                            Hour {{ hour }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">Load Attendance</button>
+            </form>
+        </section>
+
+        <hr>
+
+        <!-- Attendance form -->
+        <section>
+            <h3>Mark Students</h3>
+
+            {% if attendance_list %}
+                <div>
+                    <p>Total: {{ attendance_list|length }}</p>
+                    <p>Present: <span id="present-count">0</span></p>
+                    <p>Absent: <span id="absent-count">0</span></p>
+                </div>
+
+                <form method="post" id="attendance-form">
+                    {% csrf_token %}
+
+                    <input type="hidden" name="class_date"
+                           value="{{ selected_date|date:'Y-m-d' }}">
+
+                    <input type="hidden" name="hour_no"
+                           value="{{ selected_hour }}">
+
+                    {% for item in attendance_list %}
+                        <div>
+                            <p>
+                                {{ item.student.roll_no }} -
+                                {{ item.student.name }}
+                            </p>
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="status_{{ item.student.id }}"
+                                    value="PRESENT"
+                                    {% if item.status == "PRESENT" %}checked{% endif %}
+                                    required
+                                >
+                                Present
+                            </label>
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="status_{{ item.student.id }}"
+                                    value="ABSENT"
+                                    {% if item.status == "ABSENT" %}checked{% endif %}
+                                >
+                                Absent
+                            </label>
+                        </div>
+
+                        <hr>
+                    {% endfor %}
+
+                    <button type="submit">Submit Attendance</button>
+                </form>
+
+            {% else %}
+                <p>No students have been added to this classroom yet.</p>
+            {% endif %}
+        </section>
+    </main>
+
+    <script>
+        const attendanceForm = document.getElementById("attendance-form");
+
+        if (attendanceForm) {
+            function updateSummary() {
+                const present = attendanceForm.querySelectorAll(
+                    'input[value="PRESENT"]:checked'
+                ).length;
+
+                const absent = attendanceForm.querySelectorAll(
+                    'input[value="ABSENT"]:checked'
+                ).length;
+
+                document.getElementById("present-count").textContent = present;
+                document.getElementById("absent-count").textContent = absent;
+            }
+
+            attendanceForm.addEventListener("change", updateSummary);
+
+            updateSummary();
+        }
+    </script>
+</body>
+</html>

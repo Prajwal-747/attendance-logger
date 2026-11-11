@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Report | AttendanceLogger</title>
+</head>
+
+<body>
+    <header>
+        <h1>AttendanceLogger</h1>
+        <a href="{% url 'classroom_detail' classroom.id %}">
+            Back to Classroom
+        </a>
+    </header>
+
+    <main>
+        <h2>{{ classroom.name }} - Daily Report</h2>
+
+        <!-- Select date and hour -->
+        <form method="get">
+            <label for="date">Date</label>
+            <input
+                type="date"
+                name="date"
+                id="date"
+                value="{{ selected_date|date:'Y-m-d' }}"
+                required
+            >
+
+            <label for="hour">Hour</label>
+            <select name="hour" id="hour">
+                {% for hour in "123456" %}
+                    <option
+                        value="{{ hour }}"
+                        {% if selected_hour == hour|add:"0" %}selected{% endif %}
+                    >
+                        Hour {{ hour }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">View Report</button>
+        </form>
+
+        <hr>
+
+        <!-- Summary -->
+        <section>
+            <h3>Summary</h3>
+
+            <p>Total Marked: {{ total }}</p>
+            <p>Present: {{ present }}</p>
+            <p>Absent: {{ absent }}</p>
+            <p>Unmarked: {{ unmarked }}</p>
+        </section>
+
+        <hr>
+
+        <!-- Attendance records -->
+        <section>
+            <h3>Attendance Records</h3>
+
+            {% if attendance_records %}
+                {% for record in attendance_records %}
+                    <p>
+                        {{ record.student.roll_no }} -
+                        {{ record.student.name }} -
+                        {{ record.get_status_display }}
+                    </p>
+                {% endfor %}
+            {% else %}
+                <p>No attendance records found for this date and hour.</p>
+            {% endif %}
+        </section>
+
+        <p>
+            <a href="{% url 'mark_attendance' classroom.id %}?date={{ selected_date|date:'Y-m-d' }}&hour={{ selected_hour }}">
+                Edit Attendance
+            </a>
+        </p>
+    </main>
+</body>
+</html>

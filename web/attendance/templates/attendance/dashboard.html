@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | AttendanceLogger</title>
+</head>
+<body>
+    <header>
+        <h1>AttendanceLogger</h1>
+        <p>Welcome, {{ request.user.first_name|default:request.user.email }}</p>
+
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+    </header>
+
+    <main>
+        <h2>Your Classrooms</h2>
+        <h3>Create a Classroom</h3>
+
+<form method="post" action="{% url 'create_classroom' %}">
+    {% csrf_token %}
+
+    <label for="name">Classroom Name</label>
+    <input type="text" name="name" id="name" required>
+
+    <button type="submit">Create Classroom</button>
+</form>
+
+        {% if classrooms %}
+            {% for classroom in classrooms %}
+                <div>
+                    <h3>
+    <a href="{% url 'classroom_detail' classroom.id %}">
+        {{ classroom.name }}
+    </a>
+</h3>
+                    <p>Class code: {{ classroom.code }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>You haven't created any classrooms yet.</p>
+        {% endif %}
+    </main>
+</body>
+</html>
