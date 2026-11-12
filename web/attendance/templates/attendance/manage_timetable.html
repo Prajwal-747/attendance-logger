@@ -1,3 +1,4 @@
+
 {% extends "attendance/base.html" %}
 
 {% block title %}Manage Timetable | AttendanceLogger{% endblock %}
@@ -29,9 +30,13 @@
                 <select name="assignment" id="assignment" required>
                     <option value="">Choose subject</option>
                     {% for assignment in assignments %}
-                        <option value="{{ assignment.id }}">
-                            {{ assignment.subject.name }} —
-                            {{ assignment.teacher.get_full_name|default:assignment.teacher.username }}
+                        <option
+                            value="{{ assignment.id }}"
+                            data-is-lab="{{ assignment.subject.is_lab|yesno:'true,false' }}"
+                        >
+                            {{ assignment.subject.name }}
+                            {% if assignment.subject.is_lab %}(2-hour Lab){% endif %}
+                            — {{ assignment.teacher.get_full_name|default:assignment.teacher.username }}
                         </option>
                     {% endfor %}
                 </select>
@@ -48,14 +53,21 @@
             </div>
 
             <div class="form-field">
-                <label for="period">Period</label>
+                <label for="period">Starting Period</label>
                 <select name="period" id="period" required>
                     <option value="">Choose period</option>
                     {% for period in periods %}
-                        <option value="{{ period }}">Period {{ period }}</option>
+                        <option value="{{ period }}">
+                            Period {{ period }}
+                        </option>
                     {% endfor %}
                 </select>
             </div>
+
+            <p id="lab-note" class="text-muted" hidden>
+                Labs occupy two consecutive periods. Available starts:
+                Periods 1, 3 and 5.
+            </p>
 
             <button type="submit" class="button button-primary">
                 Add Period
@@ -82,7 +94,7 @@
             <p class="text-muted">All scheduled classroom periods.</p>
         </div>
         <span class="count-badge">
-            {{ timetable_entries|length }} periods
+            {{ timetable_entries|length }} entries
         </span>
     </div>
 
@@ -95,16 +107,35 @@
                         <th>Period</th>
                         <th>Subject</th>
                         <th>Teacher</th>
+                        <th>Duration</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for entry in timetable_entries %}
                         <tr>
                             <td>{{ entry.get_weekday_display }}</td>
-                            <td>Period {{ entry.period }}</td>
-                            <td>{{ entry.assignment.subject.name }}</td>
+                            <td>
+                                {% if entry.assignment.subject.is_lab %}
+                                    Period {{ entry.period }}–{{ entry.period|add:"1" }}
+                                {% else %}
+                                    Period {{ entry.period }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ entry.assignment.subject.name }}
+                                {% if entry.assignment.subject.is_lab %}
+                                    <span class="count-badge">Lab</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {{ entry.assignment.teacher.get_full_name|default:entry.assignment.teacher.username }}
+                            </td>
+                            <td>
+                                {% if entry.assignment.subject.is_lab %}
+                                    2 hours
+                                {% else %}
+                                    1 hour
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -118,5 +149,44 @@
         </div>
     {% endif %}
 </section>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const assignmentSelect = document.getElementById("assignment");
+    const periodSelect = document.getElementById("period");
+    const labNote = document.getElementById("lab-note");
+
+    if (!assignmentSelect || !periodSelect) return;
+
+    function updatePeriods() {
+        const selectedOption =
+            assignmentSelect.options[assignmentSelect.selectedIndex];
+
+        const isLab =
+            selectedOption &&
+            selectedOption.dataset.isLab === "true";
+
+        labNote.hidden = !isLab;
+
+        Array.from(periodSelect.options).forEach(function (option) {
+            if (!option.value) return;
+
+            const period = Number(option.value);
+
+            option.hidden = isLab && ![1, 3, 5].includes(period);
+            option.disabled = option.hidden;
+        });
+
+        const selectedPeriod = Number(periodSelect.value);
+
+        if (isLab && ![1, 3, 5].includes(selectedPeriod)) {
+            periodSelect.value = "";
+        }
+    }
+
+    assignmentSelect.addEventListener("change", updatePeriods);
+    updatePeriods();
+});
+</script>
 
 {% endblock %}

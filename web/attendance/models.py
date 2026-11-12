@@ -52,6 +52,7 @@ class Classroom(models.Model):
 
 class Subject(models.Model):
     name = models.CharField(max_length=100, unique=True)
+    is_lab = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -117,28 +118,53 @@ class TimetableEntry(models.Model):
         ]
         ordering = ["weekday", "period"]
 
+    def get_occupied_periods(self):
+        """Return all periods occupied by this timetable entry."""
+        periods = {self.period}
+
+        if self.assignment.subject.is_lab:
+            periods.add(self.period + 1)
+
+        return periods
+
     def clean(self):
         super().clean()
 
         if not self.assignment_id:
             return
 
-        conflicts = TimetableEntry.objects.filter(
-            weekday=self.weekday,
-            period=self.period,
-        ).exclude(pk=self.pk)
+        is_lab = self.assignment.subject.is_lab
 
-        # Check whether the classroom already has another subject.
-        if conflicts.filter(assignment__classroom=self.assignment.classroom).exists():
+        if is_lab and self.period not in (1, 3, 5):
             raise ValidationError(
-                "This classroom already has a subject scheduled in this period."
+                {"period": "Labs can only start in periods 1, 3 or 5."}
             )
 
-        # Check whether the teacher is already teaching elsewhere.
-        if conflicts.filter(assignment__teacher=self.assignment.teacher).exists():
-            raise ValidationError(
-                "This teacher is already assigned to another class in this period."
-            )
+        current_periods = self.get_occupied_periods()
+
+        conflicts = (
+            TimetableEntry.objects.filter(weekday=self.weekday)
+            .exclude(pk=self.pk)
+            .select_related("assignment__subject")
+        )
+
+        for entry in conflicts:
+            other_periods = entry.get_occupied_periods()
+
+            if not current_periods.intersection(other_periods):
+                continue
+
+            if entry.assignment.classroom_id == self.assignment.classroom_id:
+                raise ValidationError(
+                    "This classroom already has a subject scheduled "
+                    "during one of these periods."
+                )
+
+            if entry.assignment.teacher_id == self.assignment.teacher_id:
+                raise ValidationError(
+                    "This teacher is already assigned to another class "
+                    "during one of these periods."
+                )
 
     def __str__(self):
         return (
@@ -257,3 +283,45 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.session} - {self.status}"
+
+
+class AcademicCalendarDay(models.Model):
+    class DayType(models.TextChoices):
+        HOLIDAY = "HOLIDAY", "Holiday"
+        WORKING = "WORKING", "Working Day"
+
+    class TimetableWeekday(models.TextChoices):
+        MONDAY = "MON", "Monday Timetable"
+        TUESDAY = "TUE", "Tuesday Timetable"
+
+    date = models.DateField(unique=True)
+    day_type = models.CharField(
+        max_length=10,
+        choices=DayType.choices,
+    )
+    timetable_weekday = models.CharField(
+        max_length=3,
+        choices=TimetableWeekday.choices,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["date"]
+        verbose_name = "Academic Calendar Day"
+        verbose_name_plural = "Academic Calendar Days"
+
+    def clean(self):
+        super().clean()
+
+        if self.day_type == self.DayType.WORKING and not self.timetable_weekday:
+            raise ValidationError("Select which timetable to follow for a working day.")
+
+        if self.day_type == self.DayType.HOLIDAY and self.timetable_weekday:
+            raise ValidationError("A holiday cannot have a timetable assigned.")
+
+    def __str__(self):
+        if self.day_type == self.DayType.HOLIDAY:
+            return f"{self.date} - Holiday"
+
+        return f"{self.date} - {self.get_timetable_weekday_display()}"

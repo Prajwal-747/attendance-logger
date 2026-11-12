@@ -1,3 +1,4 @@
+
 {% extends "attendance/base.html" %}
 
 {% block title %}Take Attendance | AttendanceLogger{% endblock %}
@@ -24,7 +25,14 @@
         </div>
 
         <span class="count-badge">
-            {{ timetable_entry.get_weekday_display }} · Period {{ timetable_entry.period }}
+            {{ timetable_entry.get_weekday_display }} ·
+            Period {{ timetable_entry.period }}
+            {% if timetable_entry.assignment.subject.is_lab %}
+                – {{ timetable_entry.period|add:"1" }}
+                · 2-hour Lab
+            {% else %}
+                · 1-hour Lecture
+            {% endif %}
         </span>
     </div>
 </section>
@@ -55,51 +63,22 @@
         <div>
             <h3>Student Attendance</h3>
             <p class="text-muted">
-                Select Present or Absent for every student.
+                {% if is_locked %}
+                    Saved attendance records (read-only).
+                {% else %}
+                    Select Present or Absent for every student.
+                {% endif %}
             </p>
         </div>
     </div>
 
     {% if attendance_list %}
 
-        {% if session %}
+        {% if is_locked %}
             <div class="message message-info">
-                Attendance has already been submitted for this date.
-                You can update it below.
+                The 24-hour editing window has expired.
+                This attendance record is permanently read-only.
             </div>
-        {% endif %}
-
-        <div class="attendance-summary">
-            <div class="summary-item">
-                <span>Total Students</span>
-                <strong>{{ attendance_list|length }}</strong>
-            </div>
-
-            <div class="summary-item present-summary">
-                <span>Present</span>
-                <strong id="present-count">0</strong>
-            </div>
-
-            <div class="summary-item absent-summary">
-                <span>Absent</span>
-                <strong id="absent-count">0</strong>
-            </div>
-
-            <div class="summary-item">
-                <span>Not Marked</span>
-                <strong id="unmarked-count">{{ attendance_list|length }}</strong>
-            </div>
-        </div>
-
-        <form method="post" id="attendance-form"
-      data-total="{{ attendance_list|length }}">
-            {% csrf_token %}
-
-            <input
-                type="hidden"
-                name="class_date"
-                value="{{ selected_date|date:'Y-m-d' }}"
-            >
 
             <div class="attendance-list">
                 {% for item in attendance_list %}
@@ -113,37 +92,113 @@
                         </div>
 
                         <div class="attendance-options">
-                            <label class="attendance-option present-option">
-                                <input
-                                    type="radio"
-                                    name="status_{{ item.student.id }}"
-                                    value="PRESENT"
-                                    {% if item.status == "PRESENT" %}checked{% endif %}
-                                    required
-                                >
-                                Present
-                            </label>
-
-                            <label class="attendance-option absent-option">
-                                <input
-                                    type="radio"
-                                    name="status_{{ item.student.id }}"
-                                    value="ABSENT"
-                                    {% if item.status == "ABSENT" %}checked{% endif %}
-                                >
-                                Absent
-                            </label>
+                            {% if item.status == "PRESENT" %}
+                                <span class="attendance-option present-option">
+                                    Present
+                                </span>
+                            {% elif item.status == "ABSENT" %}
+                                <span class="attendance-option absent-option">
+                                    Absent
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not marked</span>
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}
             </div>
 
-            <div class="attendance-submit">
-                <button type="submit" class="button button-primary">
-                    Submit Attendance
-                </button>
+        {% else %}
+
+            {% if session %}
+                <div class="message message-info">
+                    Attendance has already been submitted for this date.
+                    You can update it below.
+                </div>
+            {% endif %}
+
+            <div class="attendance-summary">
+                <div class="summary-item">
+                    <span>Total Students</span>
+                    <strong>{{ attendance_list|length }}</strong>
+                </div>
+
+                <div class="summary-item present-summary">
+                    <span>Present</span>
+                    <strong id="present-count">0</strong>
+                </div>
+
+                <div class="summary-item absent-summary">
+                    <span>Absent</span>
+                    <strong id="absent-count">0</strong>
+                </div>
+
+                <div class="summary-item">
+                    <span>Not Marked</span>
+                    <strong id="unmarked-count">
+                        {{ attendance_list|length }}
+                    </strong>
+                </div>
             </div>
-        </form>
+
+            <form
+                method="post"
+                id="attendance-form"
+                data-total="{{ attendance_list|length }}"
+            >
+                {% csrf_token %}
+
+                <input
+                    type="hidden"
+                    name="class_date"
+                    value="{{ selected_date|date:'Y-m-d' }}"
+                >
+
+                <div class="attendance-list">
+                    {% for item in attendance_list %}
+                        <div class="attendance-card">
+                            <div class="student-identity">
+                                <span class="roll-badge">
+                                    {{ item.student.roll_no }}
+                                </span>
+
+                                <strong>{{ item.student.name }}</strong>
+                            </div>
+
+                            <div class="attendance-options">
+                                <label class="attendance-option present-option">
+                                    <input
+                                        type="radio"
+                                        name="status_{{ item.student.id }}"
+                                        value="PRESENT"
+                                        {% if item.status == "PRESENT" %}checked{% endif %}
+                                        required
+                                    >
+                                    Present
+                                </label>
+
+                                <label class="attendance-option absent-option">
+                                    <input
+                                        type="radio"
+                                        name="status_{{ item.student.id }}"
+                                        value="ABSENT"
+                                        {% if item.status == "ABSENT" %}checked{% endif %}
+                                    >
+                                    Absent
+                                </label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="attendance-submit">
+                    <button type="submit" class="button button-primary">
+                        Submit Attendance
+                    </button>
+                </div>
+            </form>
+
+        {% endif %}
 
     {% else %}
         <div class="empty-state">
@@ -154,6 +209,7 @@
         </div>
     {% endif %}
 </section>
+
 <script>
     const attendanceForm = document.getElementById("attendance-form");
 
@@ -179,4 +235,5 @@
         updateSummary();
     }
 </script>
+
 {% endblock %}

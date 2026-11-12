@@ -1,3 +1,4 @@
+
 {% extends "attendance/base.html" %}
 
 {% block title %}My Timetable | AttendanceLogger{% endblock %}
@@ -7,7 +8,7 @@
 <section class="page-heading">
     <h2>My Teaching Timetable</h2>
     <p class="text-muted">
-        View your scheduled classes and manage attendance.
+        Your classes for today and the next six days.
     </p>
 </section>
 
@@ -21,44 +22,86 @@
 <section class="panel">
     <div class="section-heading">
         <div>
-            <h3>Scheduled Classes</h3>
-            <p class="text-muted">Your assigned teaching periods.</p>
+            <h3>Upcoming Schedule</h3>
+            <p class="text-muted">
+                Classes are arranged by date and start time.
+            </p>
         </div>
 
         <span class="count-badge">
-            {{ timetable_entries|length }} periods
+            {{ scheduled_classes|length }} periods
         </span>
     </div>
 
-    {% if timetable_entries %}
+    {% if scheduled_classes %}
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>Day</th>
-                        <th>Period</th>
+                        <th>Date</th>
+                        <th>Time</th>
                         <th>Classroom</th>
                         <th>Subject</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for entry in timetable_entries %}
-                        <tr>
-                            <td>{{ entry.get_weekday_display }}</td>
-                            <td>Period {{ entry.period }}</td>
-                            <td>{{ entry.assignment.classroom.name }}</td>
-                            <td>{{ entry.assignment.subject.name }}</td>
+                    {% for item in scheduled_classes %}
+                        <tr
+                            {% if item.is_current %}
+                                style="background: rgba(34, 197, 94, 0.12);"
+                            {% elif item.is_next %}
+                                style="background: rgba(59, 130, 246, 0.12);"
+                            {% endif %}
+                        >
+                            <td>
+                                {{ item.weekday }}<br>
+                                <span class="text-muted">
+                                    {{ item.class_date|date:"d M Y" }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ item.start_time }} – {{ item.end_time }}
+                            </td>
+
+                            <td>
+                                {{ item.entry.assignment.classroom.name }}
+                            </td>
+
+                            <td>
+                                {{ item.entry.assignment.subject.name }}
+                            </td>
+
+                            <td>
+                                {% if item.is_current %}
+                                    <strong>Ongoing</strong>
+                                {% elif item.is_next %}
+                                    <strong>Next class</strong>
+                                {% elif item.status == "upcoming" %}
+                                    Upcoming
+                                {% elif item.status == "editable" %}
+                                    Completed
+                                {% elif item.status == "locked" %}
+                                    Attendance locked
+                                {% endif %}
+                            </td>
+
                             <td>
                                 <div class="table-actions">
-                                    <a href="{% url 'mark_attendance' entry.id %}">
-                                        Mark Attendance
-                                    </a>
+                                    {% if item.show_mark %}
+                                        <a href="{% url 'mark_attendance' item.entry.id %}?date={{ item.class_date|date:'Y-m-d' }}">
+                                            Mark Attendance
+                                        </a>
+                                    {% endif %}
 
-                                    <a href="{% url 'daily_report' entry.id %}">
-                                        View Report
-                                    </a>
+                                    {% if item.show_report %}
+                                        <a href="{% url 'daily_report' item.entry.id %}?date={{ item.class_date|date:'Y-m-d' }}">
+                                            View Report
+                                        </a>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -68,9 +111,9 @@
         </div>
     {% else %}
         <div class="empty-state">
-            <h3>No periods assigned</h3>
+            <h3>No classes scheduled</h3>
             <p class="text-muted">
-                Your timetable will appear here once a classroom assigns you a subject.
+                You have no classes scheduled for the next seven days.
             </p>
         </div>
     {% endif %}

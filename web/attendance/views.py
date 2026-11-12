@@ -10,14 +10,105 @@ from .models import (
     AttendanceSession,
     Student,
     Attendance,
+    AcademicCalendarDay,
 )
 import secrets
 import string
 from django.contrib import messages
-from datetime import date
+from datetime import date, datetime, time, timedelta
+from django.utils import timezone
 from django.db import transaction
 from django.urls import reverse
 from django.core.exceptions import ValidationError
+
+# Period start and end times
+PERIOD_TIMES = {
+    1: (time(8, 40), time(9, 40)),
+    2: (time(9, 40), time(10, 40)),
+    3: (time(11, 0), time(12, 0)),
+    4: (time(12, 0), time(13, 0)),
+    5: (time(13, 45), time(14, 45)),
+    6: (time(14, 45), time(15, 45)),
+}
+
+
+WEEKDAY_CODES = {
+    0: "MON",
+    1: "TUE",
+    2: "WED",
+    3: "THU",
+    4: "FRI",
+    5: "SAT",
+    6: None,
+}
+
+
+def get_effective_timetable_weekday(class_date):
+    """
+    Returns the timetable weekday applicable to a date.
+
+    Odd Saturdays are holidays.
+    Even Saturdays require an AcademicCalendarDay configuration.
+    """
+
+    if class_date.weekday() != 5:
+        return WEEKDAY_CODES[class_date.weekday()]
+
+    saturday_number = ((class_date.day - 1) // 7) + 1
+
+    calendar_day = AcademicCalendarDay.objects.filter(date=class_date).first()
+
+    if calendar_day:
+        if calendar_day.day_type == AcademicCalendarDay.DayType.HOLIDAY:
+            return None
+
+        return calendar_day.timetable_weekday
+
+    # First, third and fifth Saturdays are holidays.
+    if saturday_number % 2 == 1:
+        return None
+
+    # Working Saturday, but its timetable must be configured.
+    return None
+
+
+def get_class_datetimes(timetable_entry, class_date):
+    """Returns the scheduled start and end datetimes for a class."""
+    start_time = PERIOD_TIMES[timetable_entry.period][0]
+
+    if timetable_entry.assignment.subject.is_lab:
+        end_time = PERIOD_TIMES[timetable_entry.period + 1][1]
+    else:
+        end_time = PERIOD_TIMES[timetable_entry.period][1]
+
+    start_datetime = timezone.make_aware(datetime.combine(class_date, start_time))
+    end_datetime = timezone.make_aware(datetime.combine(class_date, end_time))
+
+    return start_datetime, end_datetime
+
+
+def get_class_status(timetable_entry, class_date):
+    """
+    Returns:
+    upcoming - class has not started
+    editable - class has started and the 24-hour window is open
+    locked - 24-hour editing window has expired
+    """
+
+    start_datetime, end_datetime = get_class_datetimes(
+        timetable_entry,
+        class_date,
+    )
+
+    now = timezone.localtime()
+
+    if now < start_datetime:
+        return "upcoming"
+
+    if now <= end_datetime + timedelta(hours=24):
+        return "editable"
+
+    return "locked"
 
 
 def get_accessible_classrooms(user):
@@ -288,20 +379,97 @@ def teacher_timetable(request):
         messages.error(request, "This page is only for teachers.")
         return redirect("dashboard")
 
-    timetable_entries = (
-        TimetableEntry.objects.filter(assignment__teacher=request.user)
-        .select_related(
+    entries = list(
+        TimetableEntry.objects.filter(
+            assignment__teacher=request.user,
+        ).select_related(
             "assignment__classroom",
             "assignment__subject",
         )
-        .order_by("weekday", "period")
     )
+
+    entries_by_weekday = {}
+
+    for entry in entries:
+        entries_by_weekday.setdefault(entry.weekday, []).append(entry)
+
+    today = timezone.localdate()
+    now = timezone.localtime()
+
+    scheduled_classes = []
+
+    # Show today's classes and the following six days.
+    for day_offset in range(7):
+        class_date = today + timedelta(days=day_offset)
+
+        effective_weekday = get_effective_timetable_weekday(class_date)
+
+        # Sundays and holidays have no classes.
+        if effective_weekday is None:
+            continue
+
+        day_entries = entries_by_weekday.get(effective_weekday, [])
+
+        for entry in day_entries:
+            start_datetime, end_datetime = get_class_datetimes(
+                entry,
+                class_date,
+            )
+
+            status = get_class_status(entry, class_date)
+
+            if now < start_datetime:
+                display_status = "upcoming"
+            elif now <= end_datetime:
+                display_status = "ongoing"
+            else:
+                display_status = "completed"
+
+            scheduled_classes.append(
+                {
+                    "entry": entry,
+                    "class_date": class_date,
+                    "weekday": class_date.strftime("%A"),
+                    "start_time": start_datetime.strftime("%H:%M"),
+                    "end_time": end_datetime.strftime("%H:%M"),
+                    "status": status,
+                    "is_current": start_datetime <= now <= end_datetime,
+                    "show_mark": (status == "editable" and now >= start_datetime),
+                    "show_report": now >= end_datetime,
+                    "is_next": False,
+                    "display_status": display_status,
+                }
+            )
+
+    scheduled_classes.sort(
+        key=lambda item: (
+            item["class_date"],
+            item["start_time"],
+            item["entry"].period,
+        )
+    )
+
+    # Highlight the running class, if there is one.
+    current_class = next(
+        (item for item in scheduled_classes if item["is_current"]),
+        None,
+    )
+
+    if current_class is None:
+        # Otherwise highlight the earliest upcoming class.
+        next_class = next(
+            (item for item in scheduled_classes if item["status"] == "upcoming"),
+            None,
+        )
+
+        if next_class:
+            next_class["is_next"] = True
 
     return render(
         request,
         "attendance/teacher_timetable.html",
         {
-            "timetable_entries": timetable_entries,
+            "scheduled_classes": scheduled_classes,
         },
     )
 
@@ -402,7 +570,7 @@ def mark_attendance(request, timetable_entry_id):
     assignment = timetable_entry.assignment
     classroom = assignment.classroom
 
-    # Check teacher permissions
+    # Check permissions.
     if request.user.role == User.Role.TEACHER:
         if assignment.teacher_id != request.user.id:
             messages.error(request, "You cannot mark attendance for this subject.")
@@ -420,7 +588,7 @@ def mark_attendance(request, timetable_entry_id):
         )
         return redirect("classroom_detail", classroom_id=classroom.id)
 
-    selected_date = request.GET.get("date", date.today().isoformat())
+    selected_date = request.GET.get("date", timezone.localdate().isoformat())
 
     if request.method == "POST":
         selected_date = request.POST.get("class_date", "")
@@ -428,12 +596,38 @@ def mark_attendance(request, timetable_entry_id):
     try:
         selected_date = date.fromisoformat(selected_date)
 
-        if selected_date.strftime("%a").upper() != timetable_entry.weekday:
+        effective_weekday = get_effective_timetable_weekday(selected_date)
+
+        if effective_weekday != timetable_entry.weekday:
             raise ValueError
 
     except (ValueError, TypeError):
         messages.error(request, "Please select a valid date for this class.")
-        return redirect("mark_attendance", timetable_entry_id=timetable_entry.id)
+        return redirect("teacher_timetable")
+
+    class_status = get_class_status(timetable_entry, selected_date)
+
+    # Upcoming classes cannot have attendance marked.
+    if class_status == "upcoming":
+        messages.error(
+            request,
+            "Attendance cannot be marked before the class starts.",
+        )
+        return redirect("teacher_timetable")
+
+    # Once the 24-hour window expires, attendance is permanently read-only.
+    is_locked = class_status == "locked"
+
+    if is_locked and request.method == "POST":
+        messages.error(
+            request,
+            "The 24-hour attendance editing window has expired. "
+            "Attendance is now read-only.",
+        )
+        return redirect(
+            f"{reverse('mark_attendance', args=[timetable_entry.id])}"
+            f"?date={selected_date.isoformat()}"
+        )
 
     if request.method == "POST":
         attendance_data = []
@@ -510,6 +704,7 @@ def mark_attendance(request, timetable_entry_id):
             "attendance_list": attendance_list,
             "selected_date": selected_date,
             "session": session,
+            "is_locked": is_locked,
         },
     )
 
@@ -536,17 +731,22 @@ def daily_report(request, timetable_entry_id):
     elif request.user.role != User.Role.ADMIN:
         return redirect("dashboard")
 
-    selected_date = request.GET.get("date", date.today().isoformat())
+    selected_date = request.GET.get(
+        "date",
+        timezone.localdate().isoformat(),
+    )
 
     try:
         selected_date = date.fromisoformat(selected_date)
 
-        if selected_date.strftime("%a").upper() != timetable_entry.weekday:
+        effective_weekday = get_effective_timetable_weekday(selected_date)
+
+        if effective_weekday != timetable_entry.weekday:
             raise ValueError
 
     except (ValueError, TypeError):
         messages.error(request, "Please select a valid date.")
-        return redirect("daily_report", timetable_entry_id=timetable_entry.id)
+        return redirect("teacher_timetable")
 
     session = AttendanceSession.objects.filter(
         timetable_entry=timetable_entry,

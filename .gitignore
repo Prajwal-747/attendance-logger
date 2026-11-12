@@ -221,3 +221,4 @@ __marimo__/
 
 attendance.db
 mypy.ini
+web/db.sqlite3.backup
