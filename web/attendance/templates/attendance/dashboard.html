@@ -1,3 +1,4 @@
+
 {% extends "attendance/base.html" %}
 
 {% block title %}Dashboard | AttendanceLogger{% endblock %}
@@ -14,7 +15,7 @@
 </section>
 
 {% if user_role == "ADMIN" %}
-    <section class="panel">
+    <section class="panel" id="classroom-creation">
         <div class="section-heading">
             <div>
                 <h3>College Administration</h3>
@@ -64,7 +65,7 @@
     </section>
 {% endif %}
 
-<section class="content-section">
+<section class="content-section" id="classrooms">
     <div class="section-heading">
         <div>
             <h3>Your Classrooms</h3>

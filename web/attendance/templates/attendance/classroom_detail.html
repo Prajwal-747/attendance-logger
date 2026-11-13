@@ -1,3 +1,4 @@
+
 {% extends "attendance/base.html" %}
 
 {% block title %}{{ classroom.name }} | AttendanceLogger{% endblock %}
@@ -8,9 +9,12 @@
     <div>
         <a href="{% url 'dashboard' %}" class="back-link">← Back to Dashboard</a>
         <h2>{{ classroom.name }}</h2>
-        <p class="text-muted">
-            Classroom code: <strong>{{ classroom.code }}</strong>
-        </p>
+
+        {% if user.role == "ADMIN" %}
+            <p class="text-muted">
+                Classroom code: <strong>{{ classroom.code }}</strong>
+            </p>
+        {% endif %}
     </div>
 </section>
 
@@ -40,10 +44,12 @@
             <strong>{{ students|length }}</strong>
         </div>
 
-        <div class="info-item">
-            <span class="info-label">Classroom Code</span>
-            <strong>{{ classroom.code }}</strong>
-        </div>
+        {% if user.role == "ADMIN" %}
+            <div class="info-item">
+                <span class="info-label">Classroom Code</span>
+                <strong>{{ classroom.code }}</strong>
+            </div>
+        {% endif %}
     </div>
 
     {% if user.role == "ADMIN" %}
@@ -91,25 +97,21 @@
 </section>
 
 <!-- Timetable -->
-<section class="panel">
-    <div class="section-heading">
-        <div>
-            <h3>Timetable</h3>
-            <p class="text-muted">View and manage scheduled periods.</p>
+{% if can_manage %}
+    <section class="panel">
+        <div class="section-heading">
+            <div>
+                <h3>Timetable</h3>
+                <p class="text-muted">View and manage scheduled periods.</p>
+            </div>
         </div>
-    </div>
 
-    {% if can_manage %}
         <a href="{% url 'manage_timetable' classroom.id %}"
            class="button button-primary">
             Manage Timetable
         </a>
-    {% else %}
-        <p class="text-muted">
-            Contact your class teacher to manage the timetable.
-        </p>
-    {% endif %}
-</section>
+    </section>
+{% endif %}
 
 <!-- Reports -->
 {% if can_manage %}
